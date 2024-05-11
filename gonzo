@@ -254,6 +254,10 @@ class Prompt
     yield
     print cursor.restore
   end
+
+  def max_rows
+    [TTY::Screen.rows - 2, 5].min
+  end
 end
 
 App.run
