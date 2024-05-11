@@ -127,9 +127,7 @@ class Prompt
 
   def draw
     clear_line
-    print "❯ "
-    print input
-    print cursor.column(3 + position)
+    print "❯ #{input} #{cursor.column(3 + position)}"
     print "#{cursor.save}\r\n#{cursor.clear_screen_down}"
     print completions.choices(input).first(5).join("\r\n")
     print cursor.restore
@@ -144,10 +142,10 @@ class Prompt
   end
 
   def keyctrl_d(*)
-    if position != input.size
-      input.slice!(position)
-      draw
-    end
+    return unless position != input.size
+
+    input.slice!(position)
+    draw
   end
 
   def keyctrl_u(*)
@@ -156,25 +154,25 @@ class Prompt
   end
 
   def keybackspace(*)
-    unless input.empty?
-      self.input = input[0...-1]
-      self.position -= 1
-      draw
-    end
+    return if input.empty?
+
+    self.input = input[0...-1]
+    self.position -= 1
+    draw
   end
 
   def keyleft(*)
-    unless position.zero?
-      self.position -= 1
-      print cursor.backward(1)
-    end
+    return if position.zero?
+
+    self.position -= 1
+    print cursor.backward(1)
   end
 
   def keyright(*)
-    if position < input.size
-      self.position += 1
-      print cursor.forward(1)
-    end
+    return unless position < input.size
+
+    self.position += 1
+    print cursor.forward(1)
   end
 
   def keypress(event)
@@ -208,10 +206,12 @@ class Prompt
 
   def keyenter(*) = app.done!
   def keyreturn(*) = app.done!
+
   def keyescape(*)
     app.done!
     app.quit!
   end
+
   def keyctrl_c(*) = keyescape
 
   private
