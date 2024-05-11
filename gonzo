@@ -63,7 +63,7 @@ end
 class App
   extend Forwardable
 
-  def_delegators :prompt, :draw, :clear_line, :send_input
+  def_delegators :prompt, :draw, :clear_line, :send_input, :initial_draw
 
   def self.run
     new.run
@@ -77,7 +77,7 @@ class App
   end
 
   def run
-    draw
+    initial_draw
 
     reader.subscribe(prompt)
     reader.read_keypress until done?
@@ -145,6 +145,12 @@ class Prompt
     clear_line
     print input_line
     clear_and_restore { print completions.choices(input).first(5).join("\r\n") }
+
+  def initial_draw
+    print "\n" * max_rows
+    print cursor.up(max_rows + 1)
+
+    draw
   end
 
   def clear_line
