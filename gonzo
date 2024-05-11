@@ -45,6 +45,10 @@ class Key
 end
 
 class App
+  extend Forwardable
+
+  def_delegators :prompt, :draw, :clear_line, :send_input
+
   def self.run
     new.run
   end
@@ -57,13 +61,13 @@ class App
   end
 
   def run
-    prompt.draw
+    draw
 
     reader.subscribe(prompt)
     reader.read_keypress until done?
 
-    prompt.clear_line
-    prompt.send_input unless quit?
+    clear_line
+    send_input unless quit?
 
     exit 1 if quit?
   end
