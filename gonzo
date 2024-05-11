@@ -1,0 +1,220 @@
+#!/usr/bin/env ruby
+
+require "tty-cursor"
+require "tty-reader"
+require "neovim"
+
+TTY::Reader::Console.send(:remove_const, :TIMEOUT)
+TTY::Reader::Console.const_set :TIMEOUT, 0.001
+
+class Key
+  def initialize(event)
+    @event = event
+  end
+
+  def left_word?
+    ignore? && !ctrl? && !meta? && !shift? && value == "\eb"
+  end
+
+  def right_word?
+    ignore? && !ctrl? && !meta? && !shift? && value == "\ef"
+  end
+
+  def backspace_word?
+    ignore? && !ctrl? && !meta? && !shift? && value == "\e\u007F"
+  end
+
+  def delete_word?
+    ignore? && !ctrl? && !meta? && !shift? && value == "\ed"
+  end
+
+  def regular_char?
+    %i(alpha num space).include?(name) || (!ctrl? && !meta? && ignore?)
+  end
+
+  private
+
+  attr_reader :event
+
+  def ctrl?   = event.key.ctrl
+  def meta?   = event.key.meta
+  def shift?  = event.key.shift
+  def name    = event.key.name
+  def ignore? = event.key.name == :ignore
+  def value   = event.value
+end
+
+class App
+  def self.run
+    new.run
+  end
+
+  def initialize
+    @done = false
+    @quit = false
+    @reader = TTY::Reader.new(interrupt: :noop)
+    @prompt = Prompt.new(self)
+  end
+
+  def run
+    prompt.draw
+
+    reader.subscribe(prompt)
+    reader.read_keypress until done?
+
+    prompt.clear_line
+    prompt.send_input unless quit?
+
+    exit 1 if quit?
+  end
+
+  def done?
+    @done
+  end
+
+  def done!
+    @done = true
+  end
+
+  def quit?
+    @quit
+  end
+
+  def quit!
+    @quit = true
+  end
+
+  private
+
+  attr_reader :reader, :prompt
+end
+
+class Completions
+  def initialize
+    @client = Neovim.attach_unix(ARGV[0])
+  end
+
+  def choices(q)
+    return [] if q.empty?
+
+    @choices ||= {}
+    @choices[q] ||= client.call_function("getcompletion", [q, "cmdline"])
+  end
+
+  private
+
+  attr_reader :client
+end
+
+class Prompt
+  def initialize(app)
+    @input = ""
+    @position = 0
+    @cursor = TTY::Cursor
+    @app = app
+    @completions = Completions.new
+  end
+
+  attr_accessor :input, :position
+
+  def draw
+    clear_line
+    print "❯ "
+    print input
+    print cursor.column(3 + position)
+    print "#{cursor.save}\r\n#{cursor.clear_screen_down}"
+    print completions.choices(input).first(5).join("\r\n")
+    print cursor.restore
+  end
+
+  def clear_line
+    print cursor.clear_line
+  end
+
+  def send_input
+    puts input unless input.nil?
+  end
+
+  def keyctrl_d(*)
+    if position != input.size
+      input.slice!(position)
+      draw
+    end
+  end
+
+  def keyctrl_u(*)
+    self.input = ""
+    draw
+  end
+
+  def keybackspace(*)
+    unless input.empty?
+      self.input = input[0...-1]
+      self.position -= 1
+      draw
+    end
+  end
+
+  def keyleft(*)
+    unless position.zero?
+      self.position -= 1
+      print cursor.backward(1)
+    end
+  end
+
+  def keyright(*)
+    if position < input.size
+      self.position += 1
+      print cursor.forward(1)
+    end
+  end
+
+  def keypress(event)
+    key = Key.new(event)
+
+    if key.left_word?
+      self.position = words.reverse.find { |offset| offset < position }.to_i
+
+      draw
+    elsif key.right_word?
+      self.position = words.find { |offset| offset > position } || input.size
+
+      draw
+    elsif key.backspace_word?
+      new_position = words.reverse.find { |offset| offset < position }.to_i
+      self.input.slice!(new_position..position)
+      self.position = new_position
+
+      draw
+    elsif key.delete_word?
+      new_position = words.find { |offset| offset > position } || input.size
+      self.input.slice!(position...new_position)
+
+      draw
+    elsif key.regular_char?
+      self.input << event.value
+      self.position += 1
+      draw
+    end
+  end
+
+  def keyenter(*) = app.done!
+  def keyreturn(*) = app.done!
+  def keyescape(*)
+    app.done!
+    app.quit!
+  end
+  def keyctrl_c(*) = keyescape
+
+  private
+
+  attr_reader :cursor, :app, :completions
+
+  def words
+    input.to_enum(:scan, /(\b|_)\w/).map do
+      Regexp.last_match.offset(0)[0]
+    end
+  end
+end
+
+App.run
