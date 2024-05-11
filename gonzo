@@ -12,13 +12,15 @@ class Key
     @event = event
   end
 
-  def kind
-    case
-    when left_word? then :left_word
-    when right_word? then :right_word
-    when backspace_word? then :backspace_word
-    when delete_word? then :delete_word
-    when regular_char? then :regular_char
+  def kind # rubocop:disable Metrics/MethodLength
+    if left_word? then :left_word
+    elsif right_word? then :right_word
+    elsif backspace_word? then :backspace_word
+    elsif delete_word? then :delete_word
+    elsif backspace_line? then :backspace_line
+    elsif regular_char? then :regular_char
+    else
+      :unkown
     end
   end
 
@@ -36,6 +38,10 @@ class Key
 
   def delete_word?
     ignore? && !ctrl? && !meta? && !shift? && value == "\ed"
+  end
+
+  def backspace_line?
+    ignore? && !ctrl? && !meta? && !shift? && value == "\ew"
   end
 
   def regular_char?

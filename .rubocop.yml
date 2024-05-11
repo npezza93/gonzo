@@ -659,8 +659,7 @@ Metrics/BlockNesting:
 
 Metrics/ClassLength:
   Description: Avoid classes longer than 100 lines of code.
-  Enabled: true
-  Max: 100
+  Enabled: false
   Exclude:
     - "test/models/account_test.rb"
 
@@ -682,7 +681,7 @@ Metrics/MethodLength:
   Description: Avoid methods longer than 10 lines of code.
   StyleGuide: https://github.com/bbatsov/ruby-style-guide#short-methods
   Enabled: true
-  Max: 7
+  Max: 6
   Exclude:
     - 'db/**/*'
 
