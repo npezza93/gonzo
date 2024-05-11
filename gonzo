@@ -12,6 +12,16 @@ class Key
     @event = event
   end
 
+  def kind
+    case
+    when left_word? then :left_word
+    when right_word? then :right_word
+    when backspace_word? then :backspace_word
+    when delete_word? then :delete_word
+    when regular_char? then :regular_char
+    end
+  end
+
   def left_word?
     ignore? && !ctrl? && !meta? && !shift? && value == "\eb"
   end
@@ -127,10 +137,8 @@ class Prompt
 
   def draw
     clear_line
-    print "❯ #{input} #{cursor.column(3 + position)}"
-    print "#{cursor.save}\r\n#{cursor.clear_screen_down}"
-    print completions.choices(input).first(5).join("\r\n")
-    print cursor.restore
+    print input_line
+    clear_and_restore { print completions.choices(input).first(5).join("\r\n") }
   end
 
   def clear_line
@@ -176,32 +184,9 @@ class Prompt
   end
 
   def keypress(event)
-    key = Key.new(event)
+    kind = Key.new(event).kind
 
-    if key.left_word?
-      self.position = words.reverse.find { |offset| offset < position }.to_i
-
-      draw
-    elsif key.right_word?
-      self.position = words.find { |offset| offset > position } || input.size
-
-      draw
-    elsif key.backspace_word?
-      new_position = words.reverse.find { |offset| offset < position }.to_i
-      self.input.slice!(new_position..position)
-      self.position = new_position
-
-      draw
-    elsif key.delete_word?
-      new_position = words.find { |offset| offset > position } || input.size
-      self.input.slice!(position...new_position)
-
-      draw
-    elsif key.regular_char?
-      self.input << event.value
-      self.position += 1
-      draw
-    end
+    respond_to?(kind) && send(kind) && draw
   end
 
   def keyenter(*) = app.done!
@@ -214,6 +199,30 @@ class Prompt
 
   def keyctrl_c(*) = keyescape
 
+  def left_word
+    self.position = words.reverse.find { |offset| offset < position }.to_i
+  end
+
+  def right_word
+    self.position = words.find { |offset| offset > position } || input.size
+  end
+
+  def backspace_word
+    new_position = words.reverse.find { |offset| offset < position }.to_i
+    input.slice!(new_position..position)
+    self.position = new_position
+  end
+
+  def delete_word
+    new_position = words.find { |offset| offset > position } || input.size
+    input.slice!(position...new_position)
+  end
+
+  def regular_char(event)
+    input << event.value
+    self.position += 1
+  end
+
   private
 
   attr_reader :cursor, :app, :completions
@@ -222,6 +231,16 @@ class Prompt
     input.to_enum(:scan, /(\b|_)\w/).map do
       Regexp.last_match.offset(0)[0]
     end
+  end
+
+  def input_line
+    "❯ #{input} #{cursor.column(3 + position)}"
+  end
+
+  def clear_and_restore
+    print "#{cursor.save}\r\n#{cursor.clear_screen_down}"
+    yield
+    print cursor.restore
   end
 end
 

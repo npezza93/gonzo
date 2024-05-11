@@ -1093,7 +1093,7 @@ Style/EvenOdd:
 
 Style/FrozenStringLiteralComment:
   Description: Add the frozen_string_literal comment to the top of files to help transition from Ruby 2.3.0 to Ruby 3.0.
-  Enabled: true
+  Enabled: false
 
 Lint/FlipFlop:
   Description: Checks for flip flops
