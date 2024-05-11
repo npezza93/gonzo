@@ -144,7 +144,10 @@ class Prompt
   def draw
     clear_line
     print input_line
-    clear_and_restore { print completions.choices(input).first(5).join("\r\n") }
+    clear_and_restore do
+      print completions.choices(input).first(max_rows).join("\r\n")
+    end
+  end
 
   def initial_draw
     print "\n" * max_rows
@@ -198,7 +201,7 @@ class Prompt
   def keypress(event)
     kind = Key.new(event).kind
 
-    respond_to?(kind) && send(kind) && draw
+    respond_to?(kind) && send(kind, event) && draw
   end
 
   def keyenter(*) = app.done!
@@ -211,23 +214,28 @@ class Prompt
 
   def keyctrl_c(*) = keyescape
 
-  def left_word
+  def left_word(_event)
     self.position = words.reverse.find { |offset| offset < position }.to_i
   end
 
-  def right_word
+  def right_word(_event)
     self.position = words.find { |offset| offset > position } || input.size
   end
 
-  def backspace_word
+  def backspace_word(_event)
     new_position = words.reverse.find { |offset| offset < position }.to_i
     input.slice!(new_position..position)
     self.position = new_position
   end
 
-  def delete_word
+  def delete_word(_event)
     new_position = words.find { |offset| offset > position } || input.size
     input.slice!(position...new_position)
+  end
+
+  def backspace_line(_event)
+    input.slice!(0...position)
+    self.position = 0
   end
 
   def regular_char(event)
