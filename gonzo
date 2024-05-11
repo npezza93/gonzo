@@ -96,6 +96,10 @@ end
 class Completions
   def initialize
     @client = Neovim.attach_unix(ARGV[0])
+  rescue Errno::ENOENT
+    instances = `ls ${XDG_RUNTIME_DIR:-${TMPDIR}nvim.${USER}}/*/nvim.*.0`
+    puts "Can't find that instance. Try one of these instead:\n\n#{instances}\n"
+    exit 1
   end
 
   def choices(q)
