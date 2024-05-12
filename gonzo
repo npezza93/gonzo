@@ -2,6 +2,7 @@
 
 require "tty-cursor"
 require "tty-reader"
+require "tty-screen"
 require "neovim"
 
 TTY::Reader::Console.send(:remove_const, :TIMEOUT)
@@ -151,7 +152,7 @@ class Prompt
 
   def initial_draw
     print "\n" * max_rows
-    print cursor.up(max_rows + 1)
+    print cursor.up(max_rows)
 
     draw
   end
