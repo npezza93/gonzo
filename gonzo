@@ -132,15 +132,17 @@ class Completions
 end
 
 class Prompt
+  NO_CHOICE_SELECTED = -1
   def initialize(app)
     @input = ""
     @position = 0
     @cursor = TTY::Cursor
     @app = app
     @completions = Completions.new
+    @selected = NO_CHOICE_SELECTED
   end
 
-  attr_accessor :input, :position
+  attr_accessor :input, :position, :selected
 
   def draw
     clear_line
@@ -253,6 +255,13 @@ class Prompt
 
   private
 
+  def choices
+    completions.choices(input).dup
+  end
+
+  def no_choice_selected?
+    selected == NO_CHOICE_SELECTED
+  end
   attr_reader :cursor, :app, :completions
 
   def words
