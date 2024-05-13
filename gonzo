@@ -205,12 +205,18 @@ class Prompt
     respond_to?(kind) && send(kind, event) && draw
   end
 
-  def keyenter(*) = app.done!
+  def keyenter(*)  = app.done!
   def keyreturn(*) = app.done!
+  def keyctrl_c(*) = keyescape
 
   def keyescape(*)
-    app.done!
-    app.quit!
+    if no_choice_selected?
+      app.done!
+      app.quit!
+    else
+      self.selected = NO_CHOICE_SELECTED
+      draw
+    end
   end
 
   def keyctrl_c(*) = keyescape
@@ -241,6 +247,7 @@ class Prompt
 
   def regular_char(event)
     input << event.value
+    self.selected = NO_CHOICE_SELECTED
     self.position += 1
   end
 
