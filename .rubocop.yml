@@ -655,7 +655,7 @@ Metrics/BlockNesting:
 
 Metrics/ClassLength:
   Description: Avoid classes longer than 100 lines of code.
-  Enabled: false
+  Enabled: true
   Exclude:
     - "test/models/account_test.rb"
 
