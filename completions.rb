@@ -13,11 +13,11 @@ class Completions
   end
 
   def render
-    dupe = choices
+    choices.tap do |dupe|
+      dupe[selected] = inverse(dupe[selected]) unless none_selected?
 
-    dupe[selected] = inverse(dupe[selected]) unless none_selected?
-
-    print dupe[initial_drawn_choice, max].join("\r\n")
+      print dupe[initial_drawn_choice, max].join("\r\n")
+    end
   end
 
   def tab
