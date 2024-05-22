@@ -17,7 +17,7 @@ class Completions
 
     dupe[selected] = inverse(dupe[selected]) unless none_selected?
 
-    print dupe[drawn_range].join("\r\n")
+    print dupe[initial_drawn_choice, max].join("\r\n")
   end
 
   def tab
@@ -64,14 +64,14 @@ class Completions
     client.choices(input.user).dup
   end
 
-  def drawn_range
+  def initial_drawn_choice
     at_end = selected + OFFSET
 
-    if none_selected? || (selected + OFFSET < max) then 0
+    if none_selected? || at_end < max then 0
     elsif at_end >= choices.size then choices.size - max - 1
     else
       at_end - max
-    end.then { |index| index..(index + max) }
+    end
   end
 
   def pastel
