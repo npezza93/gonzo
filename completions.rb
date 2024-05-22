@@ -68,9 +68,9 @@ class Completions
     at_end = selected + OFFSET
 
     if none_selected? || at_end < max then 0
-    elsif at_end >= choices.size then choices.size - max - 1
+    elsif at_end + 1 >= choices.size then choices.size - max
     else
-      at_end - max
+      at_end + 1 - max
     end
   end
 
