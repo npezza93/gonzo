@@ -1,6 +1,7 @@
 class Input
   def initialize
     @user = ""
+    @proposed = ""
     @position = 0
   end
 
@@ -9,7 +10,7 @@ class Input
   end
 
   def render
-    print("❯ #{user} #{cursor.column(3 + position)}")
+    print("❯ #{current_output} #{cursor_column}")
   end
 
   def backspace
@@ -72,7 +73,25 @@ class Input
     self.position += 1
   end
 
-  attr_accessor :user
+  def rollback
+    self.proposed = ""
+    self.position = user.size
+  end
+
+  def commit
+    self.user = user_with_proposed
+    self.proposed = ""
+    self.position = user.size
+  end
+
+  def current_word_column
+    if user.end_with?(" ") then position
+    else
+      user.split(/(?<=\s)/).tap(&:pop).join.size
+    end + 3
+  end
+
+  attr_accessor :user, :proposed
 
   private
 
@@ -85,6 +104,32 @@ class Input
   def words
     user.to_enum(:scan, /(\b|_)\w/).map do
       Regexp.last_match.offset(0)[0]
+    end
+  end
+
+  def current_output
+    if proposed.to_s.empty?
+      user
+    else
+      user_with_proposed
+    end
+  end
+
+  def user_with_proposed
+    split_words = user.split(/(?<=\s)/)
+
+    if user.end_with?(" ") then split_words.push(proposed)
+    else
+      split_words[split_words.size - 1] = proposed
+      split_words
+    end.join(" ").gsub(/[[:space:]]+/, " ")
+  end
+
+  def cursor_column
+    if proposed.to_s.empty?
+      cursor.column(3 + position)
+    else
+      cursor.column(3 + current_output.size)
     end
   end
 end

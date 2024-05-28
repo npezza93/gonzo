@@ -3,6 +3,10 @@ class App
 
   def_delegators :prompt, :draw, :clear_line, :print_final_input, :initial_draw
 
+  def self.client
+    @client ||= Client.new
+  end
+
   def self.run
     new.run
   end

@@ -4,14 +4,15 @@ require "tty-cursor"
 require "tty-reader"
 require "tty-screen"
 require "neovim"
-require "pastel"
+require "delegate"
 
 require_relative "key"
 require_relative "app"
 require_relative "prompt"
+require_relative "choice"
 require_relative "input"
+require_relative "client"
 require_relative "completions"
-require_relative "completion_client"
 
 TTY::Reader::Console.send(:remove_const, :TIMEOUT)
 TTY::Reader::Console.const_set :TIMEOUT, 0.001

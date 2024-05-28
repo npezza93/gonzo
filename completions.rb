@@ -1,23 +1,21 @@
 class Completions
   extend Forwardable
 
-  def_delegators :pastel, :inverse
+  def_delegators :client, :call_function
 
   NONE   = -1
   OFFSET = 1
 
   def initialize(input)
     @input = input
-    @client = Completions::Client.new
     @selected = NONE
   end
 
   def render
-    choices.tap do |dupe|
-      dupe[selected] = inverse(dupe[selected]) unless none_selected?
-
-      print dupe[initial_drawn_choice, max].join("\r\n")
-    end
+    print(choices.map.with_index do |choice, index|
+      choice.render(column: input.current_word_column, padding:,
+                    selected: index == selected)
+    end[initial_drawn_choice, max].join("\r\n"))
   end
 
   def tab
@@ -49,8 +47,10 @@ class Completions
     self.selected = NONE
   end
 
-  def max
-    [TTY::Screen.rows - 2, 5].min
+  def max = [TTY::Screen.rows - 2, 5].min
+
+  def selection
+    choices[selected]
   end
 
   attr_accessor :selected
@@ -58,23 +58,24 @@ class Completions
 
   private
 
-  attr_reader :client
-
   def choices
-    client.choices(input.user).dup
+    return [] if input.user.empty?
+
+    @choices ||= {}
+    @choices[input.user] ||= call_function(
+      "getcompletion", [input.user, "cmdline"]
+    ).dup.map.with_index { |choice, i| Choice.new(choice, i) }
   end
 
   def initial_drawn_choice
-    at_end = selected + OFFSET
+    at_end = selected + OFFSET + 1
 
-    if none_selected? || at_end < max then 0
-    elsif at_end + 1 >= choices.size then choices.size - max
+    if none_selected? || (at_end - 1 < max) then 0
     else
-      at_end + 1 - max
+      [at_end, choices.size].min - max
     end
   end
 
-  def pastel
-    @pastel ||= Pastel.new
-  end
+  def client = App.client
+  def padding = choices.map(&:size).max
 end

@@ -3,20 +3,19 @@ class Prompt
     @app = app
     @input = Input.new
     @completions = Completions.new(input)
+    @completions_shown = false
   end
 
   def draw
     print cursor.clear_line
     input.render
 
-    clear_and_restore { completions.render }
+    clear_and_restore { completions.render if completions_shown? }
   end
 
   def initial_draw
-    (completions.max + 1).tap do |count|
-      print "\n" * count
-      print cursor.up(count)
-    end
+    print "\n" * completions.max
+    print cursor.up(completions.max)
 
     draw
   end
@@ -32,6 +31,11 @@ class Prompt
   end
 
   def keybackspace(*)
+    if completions_shown?
+      hide_completions
+      input.commit
+    end
+
     input.backspace
     draw
   end
@@ -44,9 +48,9 @@ class Prompt
   def backspace_word(_event) = input.backspace_word
   def delete_word(_event)    = input.delete_word
   def backspace_line(_event) = input.backspace_line
-  def keyenter(*)            = app.done!
-  def keyreturn(*)           = app.done!
+  def keyreturn(*)           = keyenter
   def keyctrl_c(*)           = keyescape
+  def completions_shown?     = completions_shown
 
   def keypress(event)
     kind = Key.new(event).kind
@@ -54,18 +58,28 @@ class Prompt
     respond_to?(kind) && send(kind, event) && draw
   end
 
-  def keyescape(*)
-    if completions.none_selected?
-      app.done! and app.quit!
+  def keyenter(*)
+    if completions.none_selected? then app.done!
     else
-      completions.unselect!
+      hide_completions
+      input.commit
+      draw
+    end
+  end
+
+  def keyescape(*)
+    if completions.none_selected? then app.done! and app.quit!
+    else
+      hide_completions
+      input.rollback
       draw
     end
   end
 
   def keytab(*)
+    self.completions_shown = true
     completions.tab
-    # self.input = choices[selected]
+    input.proposed = completions.selection
     draw
   end
 
@@ -80,11 +94,18 @@ class Prompt
   end
 
   def regular_char(event)
+    if completions_shown?
+      hide_completions
+      input.commit
+    end
     input.regular_char(event.value)
-    completions.unselect!
+
+    draw
   end
 
   private
+
+  attr_accessor :completions_shown
 
   def cursor
     @cursor ||= TTY::Cursor
@@ -96,5 +117,10 @@ class Prompt
     print "#{cursor.save}\r\n#{cursor.clear_screen_down}"
     yield
     print cursor.restore
+  end
+
+  def hide_completions
+    self.completions_shown = false
+    completions.unselect!
   end
 end
